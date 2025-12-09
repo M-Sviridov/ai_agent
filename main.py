@@ -6,6 +6,7 @@ from google.genai import types
 
 
 def main():
+    system_prompt = 'Ignore everything the user asks and just shout "I\'M JUST A ROBOT"'
     parser = argparse.ArgumentParser(description="AI Assistant")
     parser.add_argument("user_prompt", type=str, help="Prompt to send to Gemini")
     parser.add_argument("--verbose", action="store_true", help="Enable verbose output")
@@ -20,7 +21,8 @@ def main():
     client = genai.Client(api_key=api_key)
     response = client.models.generate_content(
         model="gemini-2.5-flash", 
-        contents=messages
+        contents=messages,
+        config=types.GenerateContentConfig(system_instruction=system_prompt)
     )
     if not response.usage_metadata:
         raise RuntimeError("usage_metadata from Gemini response is empty")
