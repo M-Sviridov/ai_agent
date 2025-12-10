@@ -3,10 +3,22 @@ import argparse
 from dotenv import load_dotenv
 from google import genai
 from google.genai import types
+from functions.get_files_info import schema_get_files_info
 
+available_functions = types.Tool(
+    function_declarations=[schema_get_files_info],
+)
 
 def main():
-    system_prompt = 'Ignore everything the user asks and just shout "I\'M JUST A ROBOT"'
+    system_prompt = """
+    You are a helpful AI coding agent.
+
+    When a user asks a question or makes a request, make a function call plan. You can perform the following operations:
+
+    - List files and directories
+
+    All paths you provide should be relative to the working directory. You do not need to specify the working directory in your function calls as it is automatically injected for security reasons.
+    """
     parser = argparse.ArgumentParser(description="AI Assistant")
     parser.add_argument("user_prompt", type=str, help="Prompt to send to Gemini")
     parser.add_argument("--verbose", action="store_true", help="Enable verbose output")
@@ -22,7 +34,10 @@ def main():
     response = client.models.generate_content(
         model="gemini-2.5-flash", 
         contents=messages,
-        config=types.GenerateContentConfig(system_instruction=system_prompt)
+        config=types.GenerateContentConfig(
+            tools=[available_functions],
+            system_instruction=system_prompt
+        )
     )
     if not response.usage_metadata:
         raise RuntimeError("usage_metadata from Gemini response is empty")
@@ -33,7 +48,9 @@ def main():
         print(f"Response tokens: {response.usage_metadata.candidates_token_count}")
 
     print("Response:")
-    print(response.text)
+    for function_call in response.function_calls:
+        print(f"Calling function: {function_call.name}({function_call.args})")
+
 
 
 if __name__ == "__main__":
