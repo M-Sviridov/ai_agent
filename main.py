@@ -3,19 +3,7 @@ import argparse
 from dotenv import load_dotenv
 from google import genai
 from google.genai import types
-from functions.get_files_info import schema_get_files_info
-from functions.get_files_info import schema_get_file_content
-from functions.get_files_info import schema_run_python_file
-from functions.get_files_info import schema_write_file
-
-available_functions = types.Tool(
-    function_declarations=[
-        schema_get_files_info,
-        schema_get_file_content,
-        schema_run_python_file,
-        schema_write_file,
-    ],
-)
+from call_function import call_function, available_functions
 
 def main():
     system_prompt = """
@@ -54,14 +42,25 @@ def main():
         raise RuntimeError("usage_metadata from Gemini response is empty")
 
     if args.verbose:
-        print(f"User prompt: {args.user_prompt}")
         print(f"Prompt tokens: {response.usage_metadata.prompt_token_count}")
         print(f"Response tokens: {response.usage_metadata.candidates_token_count}")
 
-    print("Response:")
+    resp_list = []
     for function_call in response.function_calls:
-        print(f"Calling function: {function_call.name}({function_call.args})")
+        call_function_resp = call_function(function_call, args.verbose)
+        if (
+            not call_function_resp.parts[0].function_response.response
+            or not call_function_resp.parts
+        ):
+            raise Exception("empty function call result")
 
+        if args.verbose: 
+            print(f"-> {call_function_resp.parts[0].function_response.response}")
+
+        resp_list.append(call_function_resp.parts[0])
+
+    if not resp_list:
+        raise Exception("no function responses generated, exiting.")
 
 
 if __name__ == "__main__":
