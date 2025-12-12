@@ -18,10 +18,11 @@ def run_python_file(working_directory, file_path, args=[]):
 
     try:
         completed_process = subprocess.run(
-            ["python", abs_full] + args,
-            timeout=30, 
+            ["python", abs_full].extend(args),
+            timeout=30,
             capture_output=True,
-            cwd=abs_work
+            text=True,
+            cwd=abs_work,
         )
     except Exception as e:
         return (f"Error: executing Python file: {e}")
